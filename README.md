@@ -30,12 +30,16 @@ and handles disambiguation, clarification, and error correction through dialogue
 ├── spatial_relations.py          # perception: inter-object directions, table regions, placement parsing
 ├── visual_perception.py          # optional VLM-based perception module (SmolVLM2, self-test only)
 ├── grab_frames.py                # debug: save the three camera views of a scene as PNGs
-└── probe_camera_projection.py    # debug: verify world->pixel camera projection
+├── probe_camera_projection.py    # debug: verify world->pixel camera projection
+└── debug_frames/                # example/debug camera frames
+    ├── forward_raw.png
+    ├── image.png
+    ├── projection_test.png
+    ├── second_image.png
+    └── wrist_image.png
 ```
 
-> Note: the `dialogue/` package files are listed above; if your extracted copy
-> shows them at the top level instead, place them inside a `dialogue/` folder so
-> `from dialogue.state_manager import ...` resolves.
+> Note: the `dialogue/` package files are listed above.
 
 ---
 
@@ -185,7 +189,58 @@ Use `python <script>.py --help` for the full set of arguments where available.
 
 ---
 
-## 8. Notes for the marker
+## 8. Data, processing, and reproducibility
+
+**Data source.**
+No separate project dataset is included, and none is required. All scene content
+(object types, positions, geometry, and camera images) is generated at runtime by
+the **VLABench + MuJoCo** simulation environment via the LeRobot `VLABenchEnv`
+wrapper. Scenes are reproducible: `test_sim_env.py` and `grab_frames.py` both use
+a fixed random seed (`seed = 42`) by default, and pressing *reset* generates a new
+random scene. No external datasets, model outputs, or checkpoints are shipped in
+this archive.
+
+**Processing.**
+At runtime the perception modules process the simulated observations and object
+geometry directly from the environment (they do not read any stored dataset):
+- `color_extraction.py` projects each object's world position into the camera
+  image (camera key `forward` / `wrist_image`) and samples HSV pixels to name its
+  colour;
+- `shape_extraction.py` classifies each object's shape from its MuJoCo geometry
+  (with a 2-D silhouette cue);
+- `spatial_relations.py` computes inter-object directions, table regions, and
+  parses natural-language placement phrases.
+These results form a live object manifest that the dialogue mediator
+(`dialogue/`) passes to the local LLM for disambiguation.
+
+**Outputs and how to regenerate them.**
+The system is interactive; its primary "output" is the dialogue reply plus the
+robot command produced each turn, shown in the Gradio UI and printed to the
+terminal (lines tagged `[Mediator] ...`). These are regenerated simply by running
+`python test_sim_env.py` and typing commands (Section 4).
+The only saved files are debug images, which are regenerated from code:
+```bash
+python grab_frames.py --out debug_frames --seed 42   # the three camera views
+python probe_camera_projection.py                    # projection_test.png
+```
+The `debug_frames/` folder in this archive contains example outputs of the above
+(kept only as small illustrative samples, ~1 MB).
+
+**Reproducibility of external dependencies.**
+The main program depends on external frameworks that are not included (Section 2).
+For exact reproducibility, the repository revisions used during development were:
+- LeRobot — commit `41166b39fb8bacdd8f916d700064c5f64892bc0a`
+- VLABench — commit `cf588fe60c0c7282174fe979f5913170cfe69017`
+- RRT-algorithms — commit `e51d95ee489a225220d6ae2a764c4111f6ba7d85`
+
+The dialogue mediator uses a local Ollama model (`mistral`). Because it is a
+language model, its exact response wording is **not deterministic** across
+different model or runtime versions; the deterministic matching/validation layer
+in the code is what guarantees the robot only acts on a resolved target.
+
+---
+
+## 9. Notes for the marker
 
 - The main program (`test_sim_env.py`) requires all four external dependencies
   (LeRobot, VLABench, RRT, Ollama) to be installed and the absolute paths in
