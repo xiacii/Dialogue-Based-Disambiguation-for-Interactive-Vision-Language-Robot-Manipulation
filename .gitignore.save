@@ -1,0 +1,10 @@
+# Third-party repositories
+VLABench/
+lerobot/
+rrt-algorithms/
+
+# Python virtual environment
+lerobot312/
+
+# Python cache
+__

@@ -1,0 +1,16 @@
+# Third-party repositories
+VLABench/
+lerobot/
+rrt-algorithms/
+
+# Python virtual environment
+lerobot312/
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Debug / generated files
+debug_frames/
+
